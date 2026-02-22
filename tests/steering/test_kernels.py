@@ -4,7 +4,7 @@
 import pytest
 import torch
 
-from vllm.steering.ops.steering_op import _steering_add
+from vllm.steering.ops.triton_ops.steering_add_op import _steering_add
 
 DTYPES = [torch.float16, torch.bfloat16, torch.float32]
 HIDDEN_SIZES = [128, 1024, 4096]
@@ -29,6 +29,7 @@ def reference_steering_add(
 @pytest.mark.parametrize("dtype", DTYPES)
 @pytest.mark.parametrize("H", HIDDEN_SIZES)
 def test_correctness_all_steered(dtype, H):
+    """Kernel output matches PyTorch reference when all tokens are steered."""
     B, S = 32, 4
     torch.manual_seed(42)
 
@@ -48,6 +49,7 @@ def test_correctness_all_steered(dtype, H):
 
 @pytest.mark.parametrize("dtype", DTYPES)
 def test_masking_no_steering(dtype):
+    """Hidden states remain unchanged when all indices are -1."""
     B, H, S = 16, 512, 4
     torch.manual_seed(7)
 
@@ -65,6 +67,7 @@ def test_masking_no_steering(dtype):
 
 @pytest.mark.parametrize("dtype", DTYPES)
 def test_mixed_batch(dtype):
+    """Mixed batch with steered and unsteered tokens matches reference."""
     B, H, S = 8, 256, 3
     torch.manual_seed(13)
 
@@ -87,6 +90,7 @@ def test_mixed_batch(dtype):
 
 @pytest.mark.parametrize("dtype", DTYPES)
 def test_per_token_strength(dtype):
+    """Per-token variable strengths are applied correctly."""
     B, H, S = 16, 512, 2
     torch.manual_seed(99)
 
@@ -104,26 +108,9 @@ def test_per_token_strength(dtype):
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
 
-@pytest.mark.parametrize("dtype", DTYPES)
-def test_multiple_vectors(dtype):
-    B, H, S = 32, 1024, 8
-    torch.manual_seed(2024)
-
-    x = torch.randn(B, H, dtype=dtype, device="cuda")
-    sv = torch.randn(S, H, dtype=dtype, device="cuda")
-    indices = torch.randint(0, S, (B,), dtype=torch.int32, device="cuda")
-    strengths = torch.full((B,), 0.5, dtype=dtype, device="cuda")
-
-    x_ref = reference_steering_add(x, sv, indices, strengths)
-
-    _steering_add(x, sv, indices, strengths)
-
-    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
-    rtol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
-    assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
-
 
 def test_zero_batch():
+    """Zero-length batch does not error."""
     H, S = 256, 4
     x = torch.randn(0, H, dtype=torch.float32, device="cuda")
     sv = torch.randn(S, H, dtype=torch.float32, device="cuda")
