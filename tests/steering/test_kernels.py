@@ -41,7 +41,7 @@ def test_correctness_all_steered(dtype, H):
 
     _steering_add(x, sv, indices, strengths)
 
-    atol = 1e-2 if dtype == torch.float16 else 1e-5
+    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     rtol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
@@ -80,7 +80,7 @@ def test_mixed_batch(dtype):
 
     _steering_add(x, sv, indices, strengths)
 
-    atol = 1e-2 if dtype == torch.float16 else 1e-5
+    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     rtol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
@@ -99,7 +99,7 @@ def test_per_token_strength(dtype):
 
     _steering_add(x, sv, indices, strengths)
 
-    atol = 1e-2 if dtype == torch.float16 else 1e-5
+    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     rtol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
@@ -118,7 +118,7 @@ def test_multiple_vectors(dtype):
 
     _steering_add(x, sv, indices, strengths)
 
-    atol = 1e-2 if dtype == torch.float16 else 1e-5
+    atol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     rtol = 1e-2 if dtype in (torch.float16, torch.bfloat16) else 1e-5
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
