@@ -67,27 +67,39 @@ def _steering_add(
     Registered as torch.ops.vllm.steering_add so that
     torch.compile / CUDA graphs treat it as an opaque node.
 
+    Trust contract:
+        Callers are responsible for ensuring that all non-sentinel
+        index values satisfy 0 <= indices[i] < S (number of cache
+        slots). Out-of-bounds indices will cause silent GPU memory
+        corruption. This follows the trust model of the LoRA
+        punica kernels.
+
     Args:
         x: Hidden states [B, H] (mutated in-place).
         steering_vectors: Steering vector cache [S, H].
-        indices: Per-token slot index [B] (-1 indicates no steering).
+        indices: Per-token slot index [B], int32 (-1 = no steering).
         strengths: Per-token steering strength [B].
     """
     B, H = x.shape
 
+    # TODO: Remove once Phase 4 SteeringModuleWrapper guarantees 2D.
     assert x.ndim == 2, f"x must be 2D [B, H], got {x.shape}"
-    assert steering_vectors.ndim == 2, (
-        f"steering_vectors must be 2D [S, H], got {steering_vectors.shape}"
-    )
     assert steering_vectors.shape[1] == H, (
         f"Hidden dim mismatch: x has H={H}, "
         f"steering_vectors has H={steering_vectors.shape[1]}"
     )
-    assert indices.shape == (B,), (
-        f"indices must be [B={B}], got {indices.shape}"
+    assert x.dtype == steering_vectors.dtype, (
+        f"dtype mismatch: x is {x.dtype}, "
+        f"steering_vectors is {steering_vectors.dtype}"
     )
-    assert strengths.shape == (B,), (
-        f"strengths must be [B={B}], got {strengths.shape}"
+    assert indices.dtype == torch.int32, (
+        f"indices must be int32, got {indices.dtype}"
+    )
+    assert indices.size(0) == B, (
+        f"indices length must be B={B}, got {indices.size(0)}"
+    )
+    assert strengths.size(0) == B, (
+        f"strengths length must be B={B}, got {strengths.size(0)}"
     )
     assert x.is_contiguous(), "x must be contiguous"
     assert steering_vectors.is_contiguous(), (

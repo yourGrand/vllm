@@ -108,7 +108,6 @@ def test_per_token_strength(dtype):
     assert torch.allclose(x, x_ref, atol=atol, rtol=rtol)
 
 
-
 def test_zero_batch():
     """Zero-length batch does not error."""
     H, S = 256, 4
